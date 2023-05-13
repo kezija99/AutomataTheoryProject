@@ -72,8 +72,7 @@ class NFA(Automata, IRegular):
         
     def concat(self, L):
         A1 = self.exclude_unreachable_States_and_rename('q')
-        #A2 = L.to_dfa().to_nfa().exclude_unreachable_States_and_rename('p')
-        A2 = L.exclude_unreachable_States_and_rename('p')
+        A2 = L.to_dfa().to_nfa().exclude_unreachable_States_and_rename('p')
         new_startState = "newStart"
         new_Delta = A1.Delta.copy()
 
@@ -93,7 +92,6 @@ class NFA(Automata, IRegular):
             new_Delta[entry[0]] = entry[1]
 
         temp = NFA(new_startState, A2.FinalStates, new_Delta)
-        #print(str(temp))
         return temp.exclude_unreachable_States_and_rename()
 
     def Union(self, L):
@@ -259,7 +257,7 @@ class DFA(Automata, IRegular):
     def minimize_dfa(self):
         temp = self.exclude_unreachable_States_and_rename()
         non_final = set(temp.States) - set(temp.FinalStates)
-
+       
         all_States = list(temp.States)
         table = {}
         for i in range(len(all_States)):
@@ -269,20 +267,16 @@ class DFA(Automata, IRegular):
                     table[(all_States[i], all_States[j])] = True
                 else:
                     table[(all_States[i], all_States[j])] = False
-
+        
         change = True
         while change:
             change = False
             for key, value in table.items():
                 if not value:
                     for c in temp.Alfabet:
-                        if (key[0], c) not in temp.Delta or not temp.Delta[(key[0], c)]:
-                            continue
-                        result1 = temp.Delta[(key[0], c)].pop()
-                        if (key[1], c) not in temp.Delta or not temp.Delta[(key[1], c)]:
-                            continue
-                        result2 = temp.Delta[(key[1], c)].pop()
-
+                        result1 = next(iter(temp.Delta[(key[0], c)]))
+                        result2 = next(iter(temp.Delta[(key[1], c)]))
+                        
                         if (result1, result2) in table:
                             if table[(result1, result2)]:
                                 table[key] = True
@@ -290,9 +284,9 @@ class DFA(Automata, IRegular):
 
                         if (result2, result1) in table:
                             if table[(result2, result1)]:
+                                table[(result2, result1)]
                                 table[key] = True
                                 change = True
-
         partions = []
         for key, value in table.items():
             if not value:
@@ -304,7 +298,7 @@ class DFA(Automata, IRegular):
                         found = True
                 if not found:
                     partions.append(set([key[0], key[1]]))
-
+        
         newStart = temp.startState
         newFinal = set(temp.FinalStates)
         newDelta = {}
@@ -325,6 +319,6 @@ class DFA(Automata, IRegular):
 
         result = DFA(newStart, newFinal, newDelta)
         result = result.exclude_unreachable_States_and_rename()
-
+        
         return result
         

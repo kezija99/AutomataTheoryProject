@@ -9,9 +9,6 @@ class Node:
         
     @staticmethod
     def evaluate_stack(s):
-        for element in s:
-            print(element.data)
-        print('-')
         if len(s) == 1:
             return s.pop()
         else:
