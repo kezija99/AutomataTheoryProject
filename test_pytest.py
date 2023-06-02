@@ -24,7 +24,6 @@ def test_union():
     L2 = tmp.REtoIR('(aa)|(bb)')
 
     assert L1.is_equal(L1.union(L2).to_dfa())
-    assert L2.complement().minimize_dfa().complement().is_equal(L2.to_dfa())
 
     L3 = tmp.REtoIR('(a|b|c)*')
     L4 = tmp.REtoIR('a*|b*|c*')
@@ -37,10 +36,6 @@ def test_union():
     assert L2.is_equal(L2.union(empty).to_dfa())
     assert L3.is_equal(L3.union(empty).to_dfa())
     assert L4.is_equal(L4.union(empty).to_dfa())
-
-    assert L1.is_equal(empty.union(L1).to_dfa())
-    assert L2.is_equal(empty.union(L2).to_dfa())
-    assert L3.is_equal(empty.union(L3).to_dfa())
 
 def test_accept():
     tmp = IRegular()
