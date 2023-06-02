@@ -24,16 +24,21 @@ class Node:
             if RI[i] == '(':
                 i += 1
                 sub_expression, sub_i = Node.tree(RI, i)
-                s.append(sub_expression)
+                if(sub_expression.data != '$' and sub_expression.data != 'q'):
+                    s.append(sub_expression)
                 i = sub_i
             elif RI[i] == ')':
-                return Node.evaluate_stack(s), i
+                if(len(s) != 0):
+                    return Node.evaluate_stack(s), i
+                return Node('q'), i
             elif RI[i] == '|':
-                temp = Node("|")
-                temp.left = Node.evaluate_stack(s)
+                if(len(s) != 0):
+                    temp = Node("|")
+                    temp.left = Node.evaluate_stack(s)
+                    i += 1
+                    temp.right, i = Node.tree(RI, i)
+                    return temp, i
                 i += 1
-                temp.right, i = Node.tree(RI, i)
-                return temp, i
             elif RI[i] == '*':
                 temp = Node("*")
                 temp.left = s.pop()

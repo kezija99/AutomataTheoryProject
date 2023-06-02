@@ -11,6 +11,17 @@ class Automata:
         self.ConstructInferedSets()
         self.StateConsistency()
         
+    def accepts(self, word):
+        current_state = self.startState
+        for symbol in word:
+            if symbol in self.Alfabet:
+                current_state = next(iter(self.Delta[(current_state, symbol)]), None)
+                if current_state is None:
+                    return False
+            else:
+                return False
+        return current_state in self.FinalStates
+    
     def ConstructInferedSets(self):
         if len(self.startState) > 0:
             self.States.add(self.startState)
@@ -25,11 +36,12 @@ class Automata:
         if self.startState not in self.States:
             raise Exception("Start state has to be a member of states!")
             
-    def RenameAndExcludeUnreachableStatesInner(self, c: str) -> Tuple[str, Set[str], Dict[Tuple[str, str], Set[str]]]:
-        Mapping = {}
+    def rename_and_exclude_unreachableStates_inner(self, c: str) -> Tuple[str, Set[str], Dict[Tuple[str, str], Set[str]]]:
+        mapping = {}
         stateCount = 0
-        Mapping[self.startState] = self.FormStateName(c, stateCount)
-        
+        mapping[self.startState] = self.form_state_name(c, stateCount)
+        stateCount += 1
+
         reducedDelta = {}
         uncheckedStates = Queue()
         uncheckedStates.put(self.startState)
@@ -41,21 +53,21 @@ class Automata:
                     results = self.Delta[(state, symbol)]
                     renamedResults = set()
                     for resultState in results:
-                        if resultState not in Mapping:
+                        if resultState not in mapping:
+                            mapping[resultState] = self.form_state_name(c, stateCount)
                             stateCount += 1
-                            Mapping[resultState] = self.FormStateName(c, stateCount)
                             uncheckedStates.put(resultState)
-                        renamedResults.add(Mapping[resultState])
+                        renamedResults.add(mapping[resultState])
 
-                    reducedDelta[(Mapping[state], symbol)] = renamedResults
+                    reducedDelta[(mapping[state], symbol)] = renamedResults
                     
-        renamedFinalStates = set()
+        renamed_finalStates = set()
         for finalState in self.FinalStates:
-            if finalState in Mapping:
-                renamedFinalStates.add(Mapping[finalState])
+            if finalState in mapping:
+                renamed_finalStates.add(mapping[finalState])
                 
-        return Mapping[self.startState], renamedFinalStates, reducedDelta
+        return mapping[self.startState], renamed_finalStates, reducedDelta
     
     @staticmethod
-    def FormStateName(c: str, i: int) -> str:
+    def form_state_name(c: str, i: int) -> str:
         return c + str(i)
