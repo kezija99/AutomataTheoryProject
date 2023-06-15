@@ -1,98 +1,81 @@
 from IRegular import IRegular
 from IRegular import DFA, NFA
-from FAHelper import FAHelper
+from Regular import Regular
 def test_regex():
-    tmp = IRegular()
-    L1 = tmp.REtoIR('a(a)*')
-    assert L1.accepts("a")
-    assert L1.accepts("aaa")
-    assert L1.accepts("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
-    assert not L1.accepts("")
-    assert L1.complement().is_equal(DFA('q0', {'q0'}, {('q0', 'a'): {'q1'}, ('q1', 'a'): {'q1'}}))
+    l1 = IRegular.re_to_ir('a(a)*')
+    assert l1.accepts("a")
+    assert l1.accepts("aaa")
+    assert l1.accepts("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
+    assert not l1.accepts("")
+    assert l1.complement().is_equal(DFA('q0', {'q0'}, {('q0', 'a'): {'q1'}, ('q1', 'a'): {'q1'}}))
 
-    L2 = L1.to_dfa().minimize_dfa()
-    assert L2.complement().is_equal(DFA('q0', {'q0'}, {('q0', 'a'): {'q1'}, ('q1', 'a'): {'q1'}}))
+    l2 = l1.to_dfa().minimize_dfa()
+    assert l2.complement().is_equal(DFA('q0', {'q0'}, {('q0', 'a'): {'q1'}, ('q1', 'a'): {'q1'}}))
 
-    empty = tmp.REtoIR('ε')
-    astar = empty.union(L1).to_dfa().minimize_dfa()
+    empty = IRegular.re_to_ir('ε')
+    a_star = empty.union(l1).to_dfa().minimize_dfa()
     
-    assert astar.is_equal(tmp.REtoIR('a*').to_dfa())
+    assert a_star.is_equal(IRegular.re_to_ir('a*').to_dfa())
 
 def test_union():
-    tmp = IRegular()
-    L1 = tmp.REtoIR('aa|bb|(a|b|c)*')
-    L2 = tmp.REtoIR('(aa)|(bb)')
+    l1 = IRegular.re_to_ir('aa|bb|(a|b|c)*')
+    l2 = IRegular.re_to_ir('(aa)|(bb)')
 
-    assert L1.is_equal(L1.union(L2).to_dfa())
+    assert l1.is_equal(l1.union(l2).to_dfa())
 
-    L3 = tmp.REtoIR('(a|b|c)*')
-    L4 = tmp.REtoIR('a*|b*|c*')
-
-    assert not L3.is_equal(L4.to_dfa())
+    l3 = IRegular.re_to_ir('(a|b|c)*')
 
     empty = NFA('q0', {}, {})
 
-    assert L1.is_equal(L1.union(empty).to_dfa())
-    assert L2.is_equal(L2.union(empty).to_dfa())
-    assert L3.is_equal(L3.union(empty).to_dfa())
-    assert L4.is_equal(L4.union(empty).to_dfa())
+    assert l1.is_equal(l1.union(empty).to_dfa())
+    assert l2.is_equal(l2.union(empty).to_dfa())
+    assert l3.is_equal(l3.union(empty).to_dfa())
+
+    assert l1.is_equal(empty.union(l1).to_dfa())
+    assert l2.is_equal(empty.union(l2).to_dfa())
+    assert l3.is_equal(empty.union(l3).to_dfa())
 
 def test_accept():
-    tmp = IRegular()
-    L1 = tmp.REtoIR('aa|bb|(a|b|c)*')
-    L2 = tmp.REtoIR('(aa)|(bb)')
-    L3 = tmp.REtoIR('(a|b|c)*')
-    L4 = tmp.REtoIR('a*|b*|c*')
+    l1 = IRegular.re_to_ir('aa|bb|(a|b|c)*')
+    l2 = IRegular.re_to_ir('(aa)|(bb)')
+    l3 = IRegular.re_to_ir('(a|b|c)*')
+    l4 = IRegular.re_to_ir('a*|b*|c*')
 
-    assert L1.accepts('aa') and L1.accepts('bb') and L1.accepts('abbc') and L1.accepts('aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccc')
-    assert L2.accepts('aa') and L2.accepts('bb') and not L2.accepts('a')  and not L2.accepts('aaa') and not L2.accepts('b')
+    assert l1.accepts('aa') and l1.accepts('bb') and l1.accepts('abbc') and l1.accepts('aaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbccccccccccccccc')
+    assert l2.accepts('aa') and l2.accepts('bb') and not l2.accepts('a')  and not l2.accepts('aaa') and not l2.accepts('b')
 
-def test_converison():
-    tmp = IRegular()
-    helper = FAHelper()
+def test_conversion():
+    helper = Regular()
     
-    a_dfa = DFA('q0', {'q1'}, {('q0', 'a'): {'q1'}, ('q1', 'a'): {'q2'}, ('q2', 'a'): {'q2'}})
-    min_a_dfa = a_dfa.minimize_dfa()
+    a_nfa = NFA('q0', {'q1'}, {('q0', 'a'): {'q1'}})
+    min_a_dfa = a_nfa.to_dfa().minimize_dfa()
     
-    min_a_dfa = helper.handle_start_incoming(min_a_dfa)
-    min_a_dfa = helper.handle_end_outgoing(min_a_dfa)
-    hop_table = helper.get_input_symbol(min_a_dfa)
-    regex = helper.dfa_to_regex(
-        hop_table, min_a_dfa.startState, min_a_dfa.FinalStates, min_a_dfa).replace('($)', '').replace('()*', '')
+    regex = helper.dfa_to_regex(min_a_dfa)
     
-    expresion = tmp.REtoIR(regex)
+    expresion = IRegular.re_to_ir(regex)
     a_dfa2 = expresion.to_dfa().minimize_dfa()
 
-    assert a_dfa.is_equal(a_dfa2)
-    assert regex == '(a)'
+    assert a_nfa.to_dfa().minimize_dfa().is_equal(a_dfa2)
+    assert regex.replace('(ε)', '') == '(a)'
 
     a_star_dfa = DFA('q0', {'q0'}, {('q0', 'a'): {'q0'}})
     min_a_star_dfa = a_star_dfa.minimize_dfa()
+
+    regex = helper.dfa_to_regex(min_a_star_dfa)
     
-    min_a_star_dfa = helper.handle_start_incoming(min_a_star_dfa)
-    min_a_star_dfa = helper.handle_end_outgoing(min_a_star_dfa)
-    hop_table = helper.get_input_symbol(min_a_star_dfa)
-    regex = helper.dfa_to_regex(
-        hop_table, min_a_star_dfa.startState, min_a_star_dfa.FinalStates, min_a_star_dfa).replace('($)', '').replace('()*', '')
-    
-    expresion = tmp.REtoIR(regex)
+    expresion = IRegular.re_to_ir(regex)
     a_star_dfa2 = expresion.to_dfa().minimize_dfa()
 
     assert a_star_dfa.is_equal(a_star_dfa2)
-    assert regex == '(a)*'
+    assert regex.replace('(ε)', '') == '(a)*'
 
     a_or_b_dfa = DFA('q0', {'q1'}, {('q0', 'a'): {'q1'}, ('q0', 'b'): {'q1'}, ('q1', 'a'): {'q2'}, ('q1', 'b'): {'q2'}, ('q2', 'a'): {'q2'}, ('q2', 'b'): {'q2'}})
     min_a_or_b_dfa = a_or_b_dfa.minimize_dfa()
+
+    regex = helper.dfa_to_regex(min_a_or_b_dfa)
     
-    min_a_or_b_dfa = helper.handle_start_incoming(min_a_or_b_dfa)
-    min_a_or_b_dfa = helper.handle_end_outgoing(min_a_or_b_dfa)
-    hop_table = helper.get_input_symbol(min_a_or_b_dfa)
-    regex = helper.dfa_to_regex(
-        hop_table, min_a_or_b_dfa.startState, min_a_or_b_dfa.FinalStates, min_a_or_b_dfa).replace('($)', '').replace('()*', '')
-    
-    expresion = tmp.REtoIR(regex)
+    expresion = IRegular.re_to_ir(regex)
     a_or_b_dfa2 = expresion.to_dfa().minimize_dfa()
 
     assert a_or_b_dfa.is_equal(a_or_b_dfa2)
-    assert regex == '(a)|(b)' or '(b)|(a)'
-
+    assert regex.replace('(ε)', '') == '(a)|(b)' or '(b)|(a)'

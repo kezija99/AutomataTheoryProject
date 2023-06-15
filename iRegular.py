@@ -12,87 +12,81 @@ class IRegular:
         IRegular.print_tree(node.left, level + 1)
     
     @staticmethod
-    def REtoIR(RE: str):
-        if not RE:
-            raise ValueError("RE string cannot be empty!")
-        if ';' in RE or ',' in RE:
-            raise ValueError("RE cannot contain the ; or , symbols!")
-        tree = Node.parsing_tree(RE)
+    def re_to_ir(re: str):
+        if not re:
+            raise ValueError("re string cannot be empty!")
+        if ';' in re or ',' in re:
+            raise ValueError("re cannot contain the ; or , symbols!")
+        tree = Node.parsing_tree(re)
         #IRegular.print_tree(tree)
         return IRegular.construct_nfa(tree)
 
     @staticmethod
     def construct_nfa(root):
         if not root:
-            raise ValueError("Improperly parsed root cannot be None")
+            raise ValueError("Improperly parsed, root cannot be None")
         l, r = None, None
         if root.data == "|":
             l = IRegular.construct_nfa(root.left)
             r = IRegular.construct_nfa(root.right)
-            #return l.union(r).to_dfa().to_nfa()
-            pom = l.union(r).to_dfa().to_nfa()
-            return pom
+            return l.union(r).to_dfa().to_nfa()
         elif root.data == "•":
             l = IRegular.construct_nfa(root.left)
             r = IRegular.construct_nfa(root.right)
-            #return l.concat(r).to_dfa().to_nfa()
-            pom2 = l.concat(r).to_dfa().to_nfa()
-            return pom2
+            return l.concat(r).to_dfa().to_nfa()
         elif root.data == "*":
             l = IRegular.construct_nfa(root.left)
-            #return l.star().to_dfa().to_nfa()
-            pom3 = l.star().to_dfa().to_nfa()
-            return pom3
+            return l.star().to_dfa().to_nfa()
         else:
             nf = NFA("q0", {"q1"}, {("q0", root.data): ["q1"]})
             return nf
         
-class DFA(Automata, IRegular):
-    def __init__(self, startState, FinalStates, Delta):
-        super().__init__(startState, FinalStates, Delta)
+class DFA(Automata):
+    def __init__(self, start_state, final_states, delta):
+        super().__init__(start_state, final_states, delta)
     
     def __str__(self):
-        return self.startState + ' '  + str(self.FinalStates) + ' ' + str(self.Delta)
+        return self.start_state + ' '  + str(self.final_states) + ' ' + str(self.delta)
         
     def to_nfa(self):
-        return NFA(self.startState, self.FinalStates, self.Delta)
+        return NFA(self.start_state, self.final_states, self.delta)
         
-    def exclude_unreachable_States_and_rename(self, c='q'):
-        result = self.rename_and_exclude_unreachableStates_inner(c)
+    def exclude_unreachable_states_and_rename(self, c='q'):
+        result = self.rename_and_exclude_unreachable_states_inner(c)
         df = DFA(result[0], result[1], result[2])
         return df
 
-    def partion_add_to_delta(self, temp, state, newDelta, partions):
-        for c in temp.Alfabet:
-            if temp.Delta[(state, c)]:
-                result = temp.Delta[(state, c)].pop()
-                for p in partions:
+    def partition_add_to_delta(self, temp, state, new_delta, partitions):
+        for c in temp.alfabet:
+            if temp.delta[(state, c)]:
+                result = temp.delta[(state, c)].pop()
+                for p in partitions:
                     if result in p:
                         result = next(iter(p))
-                newDelta[(state, c)] = set([result])
+                new_delta[(state, c)] = set([result])
             
     def minimize_dfa(self):
-        temp = self.exclude_unreachable_States_and_rename()
-        non_final = set(temp.States) - set(temp.FinalStates)
+        temp = self.exclude_unreachable_states_and_rename()
+        non_final = set(temp.states) - set(temp.final_states)
        
-        all_States = list(temp.States)
+        all_states = list(temp.states)
         table = {}
-        for i in range(len(all_States)):
-            for j in range(i+1, len(all_States)):
-                if ((all_States[i] in temp.FinalStates and all_States[j] in non_final) or
-                    (all_States[j] in temp.FinalStates and all_States[i] in non_final)):
-                    table[(all_States[i], all_States[j])] = True
+        for i in range(len(all_states)):
+            for j in range(i+1, len(all_states)):
+                if ((all_states[i] in temp.final_states and all_states[j] in non_final) or
+                    (all_states[j] in temp.final_states and all_states[i] in non_final)):
+                    table[(all_states[i], all_states[j])] = True
                 else:
-                    table[(all_States[i], all_States[j])] = False
+                    table[(all_states[i], all_states[j])] = False
         
         change = True
         while change:
             change = False
             for key, value in table.items():
                 if not value:
-                    for c in temp.Alfabet:
-                        result1 = next(iter(temp.Delta[(key[0], c)]))
-                        result2 = next(iter(temp.Delta[(key[1], c)]))
+                    for c in temp.alfabet:
+                        result1 = next(iter(temp.delta[(key[0], c)]))
+                        result2 = next(iter(temp.delta[(key[1], c)]))
                         
                         if (result1, result2) in table:
                             if table[(result1, result2)]:
@@ -104,58 +98,55 @@ class DFA(Automata, IRegular):
                                 table[(result2, result1)]
                                 table[key] = True
                                 change = True
-        partions = []
+        partitions = []
         for key, value in table.items():
             if not value:
                 found = False
-                for i in range(len(partions)):
-                    if key[0] in partions[i] or key[1] in partions[i]:
-                        partions[i].add(key[0])
-                        partions[i].add(key[1])
+                for i in range(len(partitions)):
+                    if key[0] in partitions[i] or key[1] in partitions[i]:
+                        partitions[i].add(key[0])
+                        partitions[i].add(key[1])
                         found = True
                 if not found:
-                    partions.append(set([key[0], key[1]]))
+                    partitions.append(set([key[0], key[1]]))
         
-        newStart = temp.startState
-        newFinal = set(temp.FinalStates)
-        newDelta = {}
-        nonPartionStates = set(temp.States)
+        new_start = temp.start_state
+        new_final = set(temp.final_states)
+        new_delta = {}
+        non_partion_states = set(temp.states)
 
-        for partion in partions:
+        for partion in partitions:
             state = next(iter(partion))
-            self.partion_add_to_delta(temp, state, newDelta, partions)
-            if newStart in partion:
-                newStart = state
-            if state in newFinal:
-                newFinal -= partion
-                newFinal.add(state)
-            nonPartionStates -= partion
+            self.partition_add_to_delta(temp, state, new_delta, partitions)
+            if new_start in partion:
+                new_start = state
+            if state in new_final:
+                new_final -= partion
+                new_final.add(state)
+            non_partion_states -= partion
 
-        for state in nonPartionStates:
-            self.partion_add_to_delta(temp, state, newDelta, partions)
+        for state in non_partion_states:
+            self.partition_add_to_delta(temp, state, new_delta, partitions)
 
-        result = DFA(newStart, newFinal, newDelta)
-        result = result.exclude_unreachable_States_and_rename()
+        return DFA(new_start, new_final, new_delta).exclude_unreachable_states_and_rename()
+    
+    def is_equal(self, l):
+        a1 = l.minimize_dfa()
+        a2 = self.minimize_dfa()
+        if not (a1.alfabet.issubset(a2.alfabet) and a2.alfabet.issubset(a1.alfabet)):
+            return False
+        if len(a1.final_states) != len(a2.final_states):
+            return False
+        if len(a1.states) != len(a2.states):
+            return False
+
+        a2.alfabet = a1.alfabet
+        a2.exclude_unreachable_states_and_rename()
         
-        return result
-        
-    def is_equal(self, L):
-        A1 = L.minimize_dfa()
-        A2 = self.minimize_dfa()
-        if not (A1.Alfabet.issubset(A2.Alfabet) and A2.Alfabet.issubset(A1.Alfabet)):
-            return False
-        if len(A1.FinalStates) != len(A2.FinalStates):
-            return False
-        if len(A1.States) != len(A2.States):
-            return False
-
-        A2.Alfabet = A1.Alfabet
-        A2.exclude_unreachable_States_and_rename()
-        for entry in A1.Delta.items():
-            key, value = entry
-            if key in A2.Delta:
-                r2 = next(iter(A2.Delta[key]))
-                r1 = next(iter(value))
+        for key, value in a1.delta.items():
+            if key in a2.delta:
+                r2 = a2.delta[key]
+                r1 = value
                 if r1 != r2:
                     return False
             else:
@@ -164,146 +155,141 @@ class DFA(Automata, IRegular):
         return True
     
     def complement(self):
-        new_final = set(self.States) - self.FinalStates
-        return DFA(self.startState, new_final, self.Delta)
+        new_final = set(self.states) - self.final_states
+        return DFA(self.start_state, new_final, self.delta)
     
-class NFA(Automata, IRegular):
-    def __init__(self, startState, FinalStates, Delta):
-        super().__init__(startState, FinalStates, Delta)
+
+class NFA(Automata):
+    def __init__(self, start_state, final_states, delta):
+        super().__init__(start_state, final_states, delta)
 
     def __str__(self):
-        return self.startState + ' '  + str(self.FinalStates) + ' ' + str(self.Delta)
+        return self.start_state + ' '  + str(self.final_states) + ' ' + str(self.delta)
         
     def star(self):
-        new_startState = "newStart"
-        old_startState = set([self.startState])
+        new_start_state = "new_start"
+        old_start_state = set([self.start_state])
 
-        star_Delta = {(new_startState, 'ε'): old_startState}
-        for key, value in self.Delta.items():
-            star_Delta[key] = value
+        star_delta = {(new_start_state, 'ε'): old_start_state}
+        for key, value in self.delta.items():
+            star_delta[key] = value
 
-        new_final = set([new_startState])
-        for state in self.FinalStates:
-            star_Delta[(state, 'ε')] = new_final
+        new_final = set([new_start_state])
+        for state in self.final_states:
+            star_delta[(state, 'ε')] = new_final
 
-        return NFA(new_startState, new_final, star_Delta)
+        return NFA(new_start_state, new_final, star_delta)
         
-    def concat(self, L):
-        A1 = self.exclude_unreachable_States_and_rename('q')
-        A2 = L.to_dfa().to_nfa().exclude_unreachable_States_and_rename('p')
-        #A2 = L.exclude_unreachable_States_and_rename('p')
-        new_startState = "newStart"
-        new_delta = A1.Delta
+    def concat(self, l):
+        a1 = self.exclude_unreachable_states_and_rename('q')
+        a2 = l.to_dfa().to_nfa().exclude_unreachable_states_and_rename('p')
+        new_start_state = "new_start"
+        new_delta = a1.delta
 
-        A1_start = {A1.startState}
-        new_delta[(new_startState, 'ε')] = A1_start
+        a1_start = {a1.start_state}
+        new_delta[(new_start_state, 'ε')] = a1_start
 
         m_state = "Middle"
         middle_state = {m_state}
 
-        for final_state in A1.FinalStates:
+        for final_state in a1.final_states:
             new_delta[(final_state, 'ε')] = middle_state
 
-        A2_start = {A2.startState}
-        new_delta[(m_state, 'ε')] = A2_start
+        a2_start = {a2.start_state}
+        new_delta[(m_state, 'ε')] = a2_start
 
-        for entry in A2.Delta.items():
+        for entry in a2.delta.items():
             new_delta[entry[0]] = entry[1]
 
-        temp = NFA(new_startState, A2.FinalStates, new_delta).exclude_unreachable_States_and_rename()
-        return temp
+        return NFA(new_start_state, a2.final_states, new_delta).exclude_unreachable_states_and_rename()
 
-    def union(self, L):
-        A1 = self.exclude_unreachable_States_and_rename('q')
-        A2 = L.to_dfa().to_nfa().exclude_unreachable_States_and_rename('p')
-        #A2 = L.exclude_unreachable_States_and_rename('p')
+    def union(self, l):
+        a1 = self.exclude_unreachable_states_and_rename('q')
+        a2 = l.to_dfa().to_nfa().exclude_unreachable_states_and_rename('p')
 
-        new_startState = "newStart"
-        new_delta = A1.Delta
+        new_start_state = "new_start"
+        new_delta = a1.delta
         
-        start_union = {A1.startState}
-        start_union.add(A2.startState)
-        new_delta[(new_startState, 'ε')] = start_union
+        start_union = {a1.start_state}
+        start_union.add(a2.start_state)
+        new_delta[(new_start_state, 'ε')] = start_union
         
-        for entry in A2.Delta.items():
+        for entry in a2.delta.items():
             new_delta[entry[0]] = entry[1]
             
-        new_finalStates = set(A1.FinalStates)
-        new_finalStates.update(A2.FinalStates)
+        new_final_states = set(a1.final_states)
+        new_final_states.update(a2.final_states)
         
-        temp = NFA(new_startState, new_finalStates, new_delta)
-        
-        return temp.exclude_unreachable_States_and_rename()
+        return NFA(new_start_state, new_final_states, new_delta).exclude_unreachable_states_and_rename()
 
     def to_dfa(self):
-        newStart = self.one_closure(self.startState)
-        uncheckedSets = Queue()
-        uncheckedSets.put(newStart)
+        new_start = self.one_closure(self.start_state)
+        unchecked_sets = Queue()
+        unchecked_sets.put(new_start)
         count = 0
-        newName = dict()
-        newName[frozenset(newStart)] = Automata.form_state_name('p', count)
+        new_name = dict()
+        new_name[frozenset(new_start)] = Automata.form_state_name('p', count)
         count += 1
-        newFinal = set()
-        if newStart.intersection(self.FinalStates):
-            newFinal.add(newName[frozenset(newStart)])
-        checkedStates = set()
-        newDelta = dict()
-        nonEpsilon_alfabet = set(self.Alfabet)
-        nonEpsilon_alfabet.discard('ε')
-        while not uncheckedSets.empty():
-            States = uncheckedSets.get()
-            checkedStates.add(newName[frozenset(States)])
-            for symbol in nonEpsilon_alfabet:
-                resultStates = set()
-                for state in States:
-                    if (state, symbol) in self.Delta:
-                        resultStates.update(self.Delta[(state, symbol)])
-                resultStates = self.closure(resultStates)
+        new_final = set()
+        if new_start.intersection(self.final_states):
+            new_final.add(new_name[frozenset(new_start)])
+        checked_states = set()
+        new_delta = dict()
+        non_epsilon_alfabet = set(self.alfabet)
+        non_epsilon_alfabet.discard('ε')
+        while not unchecked_sets.empty():
+            states = unchecked_sets.get()
+            checked_states.add(new_name[frozenset(states)])
+            for symbol in non_epsilon_alfabet:
+                result_states = set()
+                for state in states:
+                    if (state, symbol) in self.delta:
+                        result_states.update(self.delta[(state, symbol)])
+                result_states = self.closure(result_states)
                 
-                statename = ""
-                for key in newName:
-                    if key == resultStates:
-                        statename = newName[key]
-                if len(statename) == 0:
-                    newName[frozenset(resultStates)] = Automata.form_state_name('p', count)
-                    statename = newName[frozenset(resultStates)]
+                state_name = ""
+                for key in new_name:
+                    if key == result_states:
+                        state_name = new_name[key]
+                if len(state_name) == 0:
+                    new_name[frozenset(result_states)] = Automata.form_state_name('p', count)
+                    state_name = new_name[frozenset(result_states)]
                     count += 1
-                    uncheckedSets.put(resultStates)
-                if resultStates.intersection(self.FinalStates):
-                    newFinal.add(statename)
-                newDelta[(newName[frozenset(States)], symbol)] = {statename}
-        df = DFA(newName[frozenset(newStart)], newFinal, newDelta)
-        return df
+                    unchecked_sets.put(result_states)
+                if result_states.intersection(self.final_states):
+                    new_final.add(state_name)
+                new_delta[(new_name[frozenset(states)], symbol)] = {state_name}
+        return DFA(new_name[frozenset(new_start)], new_final, new_delta)
         
     def one_closure(self, state):
-        C = set([state])
-        uncheckedStates = Queue()
-        uncheckedStates.put(state)
-        checkedStates = set()
-        while not uncheckedStates.empty():
-            currentState = uncheckedStates.get()
-            checkedStates.add(currentState)
-            if (currentState, 'ε') in self.Delta:
-                C.update(self.Delta[(currentState, 'ε')])
-                for s in self.Delta[(currentState, 'ε')]:
-                    if s not in checkedStates:
-                        uncheckedStates.put(s)
-        return C
+        c = set([state])
+        unchecked_states = Queue()
+        unchecked_states.put(state)
+        checked_states = set()
+        while not unchecked_states.empty():
+            current_state = unchecked_states.get()
+            checked_states.add(current_state)
+            if (current_state, 'ε') in self.delta:
+                c.update(self.delta[(current_state, 'ε')])
+                for s in self.delta[(current_state, 'ε')]:
+                    if s not in checked_states:
+                        unchecked_states.put(s)
+        return c
 
-    def closure(self, States):
+    def closure(self, states):
         closure_states = set()
-        for state in States:
+        for state in states:
             closure_states.update(self.one_closure(state))
         return closure_states
 
 
-    def exclude_unreachable_States_and_rename(self, c='q'):
-        result = self.rename_and_exclude_unreachableStates_inner(c)
+    def exclude_unreachable_states_and_rename(self, c='q'):
+        result = self.rename_and_exclude_unreachable_states_inner(c)
         nf = NFA(result[0], result[1], result[2])
         return nf
         
     def complement(self):
         return self.to_dfa().complement()
     
-    def is_equal(self, L):
-        return self.to_dfa().is_equal(L)
+    def is_equal(self, l):
+        return self.to_dfa().is_equal(l)
