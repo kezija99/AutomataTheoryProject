@@ -11,6 +11,7 @@ class IRegular:
         print(' ' * 4 * level + '->', node.data)
         IRegular.print_tree(node.left, level + 1)
     
+    #Re_to_ir converts a regular expression string to NFA by creating a parsing tree and then converting it to an NFA using the star, union and concat operations
     @staticmethod
     def re_to_ir(re: str):
         if not re:
@@ -18,9 +19,10 @@ class IRegular:
         if ';' in re or ',' in re:
             raise ValueError("re cannot contain the ; or , symbols!")
         tree = Node.parsing_tree(re)
-        #IRegular.print_tree(tree)
         return IRegular.construct_nfa(tree)
 
+    #creates NFA from the parsing tree, recursively. It does so by creating an NFA from every symbol that is not an operator. However, if the symbol is operator,
+    #the corresponding operation is called.
     @staticmethod
     def construct_nfa(root):
         if not root:
@@ -40,7 +42,8 @@ class IRegular:
         else:
             nf = NFA("q0", {"q1"}, {("q0", root.data): ["q1"]})
             return nf
-        
+
+#Class which represents Deterministic Finite Automata
 class DFA(Automata):
     def __init__(self, start_state, final_states, delta):
         super().__init__(start_state, final_states, delta)
@@ -56,6 +59,8 @@ class DFA(Automata):
         df = DFA(result[0], result[1], result[2])
         return df
 
+    #helper method for the minimize_dfa method which checks each symbol if it leads to one of the partitions or not. If it doesn't lead to a partition it means 
+    #the state is the only element in it's partition.
     def partition_add_to_delta(self, temp, state, new_delta, partitions):
         for c in temp.alfabet:
             if temp.delta[(state, c)]:
@@ -65,6 +70,7 @@ class DFA(Automata):
                         result = next(iter(p))
                 new_delta[(state, c)] = set([result])
             
+    #this is a method for minimizing an DFA based on the theoretical DFA minimization algorithm
     def minimize_dfa(self):
         temp = self.exclude_unreachable_states_and_rename()
         non_final = set(temp.states) - set(temp.final_states)
@@ -130,6 +136,8 @@ class DFA(Automata):
 
         return DFA(new_start, new_final, new_delta).exclude_unreachable_states_and_rename()
     
+    #method for checking the equality of a two DFA's by comparing their alphabet, after minimizing them both. If they both return the same state for every 
+    #symbol-state pair, they are equal
     def is_equal(self, l):
         a1 = l.minimize_dfa()
         a2 = self.minimize_dfa()
@@ -158,7 +166,8 @@ class DFA(Automata):
         new_final = set(self.states) - self.final_states
         return DFA(self.start_state, new_final, self.delta)
     
-
+#Class which represents both Non-deterministic Finite Automata and ε-NFA. It also contains all of the operator methods which are based on the theoretical algorithms
+#shown in Theory of Automata
 class NFA(Automata):
     def __init__(self, start_state, final_states, delta):
         super().__init__(start_state, final_states, delta)

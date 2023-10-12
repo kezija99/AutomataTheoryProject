@@ -20,8 +20,8 @@ class Regular:
     def find_pre_suc(self, state, table, dfa: DFA):
         preds = []
         succs = []
-        curr_dict_for_from = {st: {to: v for to, v in val.items(
-        ) if to == state} for st, val in table.items()}
+        curr_dict_for_from = {st: {to: v for to, v in val.items() if to == state}
+                               for st, val in table.items()}
 
         for pred in dfa.states:
             if pred not in curr_dict_for_from.keys() or pred == state:
